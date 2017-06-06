@@ -5,6 +5,7 @@ var map = (function() {
 	var infoWindow = document.getElementById('info_window');	
 	var map = null;
 	var geojson = null;
+	var lastFeature = null;
 
 	function initMap() {
 		// Create the Map
@@ -21,13 +22,7 @@ var map = (function() {
 		    accessToken: 'pk.eyJ1IjoidHdhbGtlcjE0NjQiLCJhIjoiY2ozZzN0bHA2MDF4ZDJxb2lpdTc0OXBodSJ9.cRI1-1g_vdffzX2jG3aY8A'
 		}).addTo(map);
 
-		function featureInfoWindow(e) {
-			console.log("click!");
-		//infoWindow.style.display = "";
-		//document.getElementById('osm_id').value = event.feature.getId();
-		//document.getElementById('json').value = JSON.stringify(obj));
-		}
-
+		// set up geoJSON
 		geojson = L.geoJson([], {
 			style: 	{	"color": "#ff7800",
    						"weight": 5,
@@ -35,20 +30,18 @@ var map = (function() {
 					},
 			onEachFeature: function popupWindow(feature, layer) {
 				layer.on('click', function (e) {
+					lastFeature = feature;
 					infoWindow.style.display = "";
 					console.log(feature.properties);
 					var form = document.getElementById('iw_form_parent');
-					form.innerHTML = "<div class='form-group'><div class='col-md-4 col-sm-12'><span for='osm_id' class='label label-primary'>OSM ID</span></div><div class='col-md-8 col-sm-12'><input type='text' id='osm_id' class='form-control' value="
-						+ feature.properties["id"] + " disabled></div>";
+					form.innerHTML = "<div class='form-group'><div class='col-md-4 col-sm-12'><span for='osm_id' class='label label-primary'>OSM ID</span></div><div class='col-md-8 col-sm-12'><input type='text' name='osm_id' id='osm_id' class='form-control' value="
+						+ feature.id + " disabled></div>";
 
 
 					for (var key in feature.properties) {
 						if (feature.properties.hasOwnProperty(key)) {
-							if (key == "id") continue;
-							
 							form.innerHTML+="<div class='form-group'><div class='col-md-4 col-sm-12'><span for='" + key +"' class='label label-info'>" + key 
-								+ "</span></div><div class='col-md-8 col-sm-12'><input type='text' class='form-control' id='" + key + "' placeholder='" + feature.properties[key] + "'></div>";
-							console.log(key + " -> " + feature.properties[key]);
+								+ "</span></div><div class='col-md-8 col-sm-12'><input type='text' class='form-control' name='" + key + "' id='" + key + "' value='" + feature.properties[key] + "'></div>";
 						}
 					}
 				});
@@ -58,6 +51,7 @@ var map = (function() {
 	}
 
 	function submitPointQuery() {
+		// queries a single s2cell
 		var date = document.getElementById('calendar').value;
 		timestamp = new Date(date);
 		timestamp.setHours(document.getElementById('ts_hours').value);
@@ -96,6 +90,9 @@ var map = (function() {
 	}
 
 	function submitRegionQuery() {
+		// queries entire screen
+		
+		// checks for historical query
 		if (document.getElementById('hqToggle').children[0].checked) {
 			var date = document.getElementById('calendar').value;
 			timestamp = new Date(date);
@@ -138,6 +135,8 @@ var map = (function() {
 	}
 
 	function addFeature() {
+		// adds new feature from pure JSON
+		// (TODO: MAKE USER FRIENDLY)
 		var featureJSON = prompt("Insert the GeoJSON information below:", "Insert GeoJSON Here");
 			try {
 				var json = JSON.parse(featureJSON);
@@ -159,6 +158,22 @@ var map = (function() {
 
 	}
 
+	function editFeature() {
+		// read all boxes in to new geoJSON
+		var form = document.getElementById('iw_form_parent');
+		var newFeatureProperties = {};
+		for (var i = 0; i < form.elements.length; i++) {
+			newFeatureProperties[form.elements[i].id] = form.elements[i].value;
+		}
+
+		// compare new geoJSON to lastFeature
+		if (newFeatureProperties == lastFeature.properties) {
+			console.log("good");
+			// check if valid geoJSON
+				// delete old
+				// add edited
+		}
+	}
 
 	// Module Exports
 	return {
@@ -166,6 +181,7 @@ var map = (function() {
 		submitRegionQuery: submitRegionQuery,
 		submitPointQuery: submitPointQuery,
 		addFeature: addFeature,
-		deleteFeature: deleteFeature
+		deleteFeature: deleteFeature,
+		editFeature: editFeature
 	};
 })();

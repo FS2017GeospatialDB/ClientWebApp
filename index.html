@@ -117,7 +117,9 @@
         <div class="col-sm-4 col-sm-offset-2">
           <div class="panel" id="info_window" style="display:none">
             <div class="panel-body">
-              <div class="container-fluid smallPadding" style="overflow-y:auto; height:300px;" id="iw_form_parent"></div>
+              <div class="container-fluid smallPadding" style="overflow-y:auto; height:300px;">
+			    <form name='iw_form_parent' id='iw_form_parent'></form>
+              </div>
               <div class="row">
                 <div class="col-12 col-lg-4">
                   <button type="button" class="btn btn-block" style="white-spce: normal;word-wrap: break-word" id="cancel" onclick="cancel('info_window', 'iw_form_parent')">Cancel</button>
@@ -126,7 +128,7 @@
                   <button type="button" class="btn btn-block" style="white-spce: normal;word-wrap: break-word" onclick="map.deleteFeature()" id="delete">Delete</button>
                 </div>
                 <div class="col-12 col-lg-4">
-                  <button type="button" class="btn btn-primary btn-block" onclick="map.addFeature()" id="edit">Submit</button>
+                  <button type="button" class="btn btn-primary btn-block" onclick="map.editFeature()" id="edit">Submit</button>
                 </div>
 			  </div>
             </div>
