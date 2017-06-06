@@ -1,8 +1,8 @@
 var map = (function() {
 
 	// Private Variables
-	var infoWindow_old = null;
-	var infoWindow = document.getElementById('info_window');	
+	var infoWindow = document.getElementById('info_window');
+	var iw_form = document.getElementById('iw_form_parent');	
 	var map = null;
 	var geojson = null;
 	var lastFeature = null;
@@ -33,15 +33,15 @@ var map = (function() {
 					lastFeature = feature;
 					infoWindow.style.display = "";
 					console.log(feature.properties);
-					var form = document.getElementById('iw_form_parent');
-					form.innerHTML = "<div class='form-group'><div class='col-md-4 col-sm-12'><span for='osm_id' class='label label-primary'>OSM ID</span></div><div class='col-md-8 col-sm-12'><input type='text' name='osm_id' id='osm_id' class='form-control' value="
-						+ feature.id + " disabled></div>";
-
+					iw_form.innerHTML = "<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='osm_id' class='label label-primary'>OSM ID</span></div><div class='col-md-8 col-sm-12'><input type='text' name='osm_id' id='osm_id' class='form-control' value="
+						+ feature.id + " disabled></div></div>";
 
 					for (var key in feature.properties) {
 						if (feature.properties.hasOwnProperty(key)) {
-							form.innerHTML+="<div class='form-group'><div class='col-md-4 col-sm-12'><span for='" + key +"' class='label label-info'>" + key 
-								+ "</span></div><div class='col-md-8 col-sm-12'><input type='text' class='form-control' name='" + key + "' id='" + key + "' value='" + feature.properties[key] + "'></div>";
+							iw_form.innerHTML+="<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='"
+								+ key +"' class='label label-info'>" + key 
+								+ "</span></div><div class='col-md-8 col-sm-12'><input type='text' class='form-control' name='"
+								+ key + "' id='" + key + "' value='" + feature.properties[key] + "'></div></div>";
 						}
 					}
 				});
@@ -136,43 +136,61 @@ var map = (function() {
 
 	function addFeature() {
 		// adds new feature from pure JSON
-		// (TODO: MAKE USER FRIENDLY)
-		var featureJSON = prompt("Insert the GeoJSON information below:", "Insert GeoJSON Here");
-			try {
-				var json = JSON.parse(featureJSON);
-				L.geoJSON(json, {
-					style: 	{	"color": "#ff7800",
-   								"weight": 5,
-								"opacity": 0.65
-			   				}
-				}).bindPopup(function (layer) {
-				    return layer.feature.properties.description;
-				}).addTo(map);
-			} catch(e) {
-				window.alert("Invalid GeoJSON");
-			}
-			console.log(featureJSON);
+		geometry = { "type":"Node", "coordinates":[-105.2165554103375,39.748910981699794] }
+		lastFeature = { "geometry":geometry, "properties":null};
+		infoWindow.style.display = "";
+		iw_form.innerHTML = "";
+	}
+
+	function addProperty() {
+		var key = prompt("New property:", "key");
+		iw_form.innerHTML+="<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='"
+			+ key + "' class='label label-info'>" + key 
+			+ "</span></div><div class='col-md-8 col-sm-12'><input type='text' class='form-control' name='"
+			+ key + "' id='" + key + "' placeholder='value'></div></div>";
+		document.getElementById(key).focus();
+		document.getElementById(key).select()
 	}
 	
 	function deleteFeature() {
-
+		// send feature id to thrift for deletion TODO: FINISH
+		console.log("to thrift: delete " + lastFeature.id);
+		cancel("info_window");
 	}
 
 	function editFeature() {
 		// read all boxes in to new geoJSON
-		var form = document.getElementById('iw_form_parent');
 		var newFeatureProperties = {};
-		for (var i = 0; i < form.elements.length; i++) {
-			newFeatureProperties[form.elements[i].id] = form.elements[i].value;
+		for (var i = 1; i < iw_form.elements.length; i++) { //skips first element (osm_id)
+			newFeatureProperties[iw_form.elements[i].id] = iw_form.elements[i].value;
 		}
 
-		// compare new geoJSON to lastFeature
-		if (newFeatureProperties == lastFeature.properties) {
-			console.log("good");
-			// check if valid geoJSON
-				// delete old
-				// add edited
+		if (lastFeature.properties === null) {
+			// adding new feature
+			try {
+				// check if valid geoJSON
+				geojson.addData(newFeature);
+
+				// send new feature to thrift for processing TODO: FINISH
+				console.log("to thrift: add " + JSON.stringify(newFeature));
+			} catch(e) {
+				window.alert("Invalid GeoJSON");
+			}
+		} else if (JSON.stringify(newFeatureProperties) != JSON.stringify(lastFeature.properties)) {
+			// updating feature
+			try {
+				// check if valid geoJSON
+				var newFeature = lastFeature;
+				newFeature.properties = newFeatureProperties	
+				geojson.addData(newFeature);
+
+				// send new feature to thrift for processing TODO: FINISH
+				console.log("to thrift: update " + lastFeature.id + " to " + JSON.stringify(newFeature));
+			} catch(e) {
+				window.alert("Invalid GeoJSON");
+			}
 		}
+		cancel('info_window');
 	}
 
 	// Module Exports
@@ -181,6 +199,7 @@ var map = (function() {
 		submitRegionQuery: submitRegionQuery,
 		submitPointQuery: submitPointQuery,
 		addFeature: addFeature,
+		addProperty: addProperty,
 		deleteFeature: deleteFeature,
 		editFeature: editFeature
 	};
