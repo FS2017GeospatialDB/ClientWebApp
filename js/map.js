@@ -11,14 +11,21 @@ var map = (function() {
 							"opacity": 0.65
 			},
 		onEachFeature: popupWindow
+		}).on('layeradd', function(e) { lastLayer = e.layer; });
+	var selectedLayer = L.geoJson([], {
+		style: 	{	"color": "#ffff00",
+   						"weight": 5,
+							"opacity": 0.65
+			},
 		});
 	var editingLayers = L.geoJson([], {
 		style: 	{	"weight": 5,
 							"opacity": 0.65
 			},
 		onEachFeature: popupWindow
-		});
+		}).on('layeradd', function(e) { lastLayer = e.layer; });
 	var lastFeature = null;
+	var lastLayer = null;
 
 	function initMap() {
 		// Create the Map
@@ -39,37 +46,43 @@ var map = (function() {
 				circle: false
 		}}));
 
-		// draw new shape
+		// when new shape finished
 		map.on(L.Draw.Event.CREATED, function (e) {
 			var type = e.layerType;
-			var layer = e.layer;
-			editingLayers.addData(layer.toGeoJSON());
-			addFeature(layer.toGeoJSON());
+			lastLayer = e.layer.toGeoJSON();
+			editingLayers.addData(lastLayer);
+			addFeature(lastLayer.feature);
 		});
 
 		geojson.addTo(map);
+		selectedLayer.addTo(map);
 		editingLayers.addTo(map);
 	}
 
 	function popupWindow(feature, layer) {
 		layer.on('click', function (e) {
 			lastFeature = feature;
-			infoWindow.style.display = "";
-			console.log(feature.properties);
-					iw_form.innerHTML = "<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='osm_id' class='label label-primary'>OSM ID</span></div><div class='col-md-8 col-sm-12'><input type='text' name='osm_id' id='osm_id' class='form-control' value="
-						+ feature.id + " disabled></div></div>";
+			lastLayer = layer;
 
-					for (var key in feature.properties) {
-						if (feature.properties.hasOwnProperty(key)) {
-							properties.push(key);
-							iw_form.innerHTML+="<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='"
-								+ key +"' class='label label-info'>" + key 
-								+ "</span></div><div class='col-md-8 col-sm-12'><input type='text' class='form-control' name='"
-								+ key + "' id='" + key + "' value='" + feature.properties[key] + "'></div></div>";
-						}
-					}
-				});
+			// create info panel
+			infoWindow.style.display = "";
+			iw_form.innerHTML = "<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='osm_id' class='label label-primary'>OSM ID</span></div><div class='col-md-8 col-sm-12'><input type='text' name='osm_id' id='osm_id' class='form-control' value="
+				+ feature.id + " disabled></div></div>";
+			for (var key in feature.properties) {
+				if (feature.properties.hasOwnProperty(key)) {
+					properties.push(key);
+					iw_form.innerHTML+="<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='"
+						+ key +"' class='label label-info'>" + key 
+						+ "</span></div><div class='col-md-8 col-sm-12'><input type='text' class='form-control' name='"
+						+ key + "' id='" + key + "' value='" + feature.properties[key] + "'></div></div>";
+				}
 			}
+
+			// highlight this feature
+			selectedLayer.clearLayers();
+			selectedLayer.addData(feature);
+		});
+	}
 
 	function submitPointQuery() {
 		// queries a single s2cell
@@ -160,6 +173,10 @@ var map = (function() {
 		infoWindow.style.display = "";
 		iw_form.innerHTML = "";
 		properties = [];
+
+		// highlight this feature
+		selectedLayer.clearLayers();
+		selectedLayer.addData(feature);
 	}
 
 	function addProperty() {
@@ -175,12 +192,24 @@ var map = (function() {
 	}
 	
 	function deleteFeature() {
-		// send feature id to thrift for deletion TODO: FINISH
-		console.log("to thrift: delete " + lastFeature.id);
-		cancel("info_window");
+		if (lastFeature.hasOwnProperty('id')) {
+			// send feature id to thrift for deletion TODO: FINISH
+			console.log("to thrift: delete " + lastFeature.id);
+		}
+
+		// hide panel and remove feature from all layers
+		cancel('info_window');
+		selectedLayer.clearLayers();
+		editingLayers.removeLayer(lastLayer);
+		geojson.removeLayer(lastLayer);
 	}
 
 	function editFeature() {
+		// hide panel and remove feature from edit/select layers
+		cancel('info_window');
+		selectedLayer.clearLayers();
+		editingLayers.removeLayer(lastLayer);
+
 		// read all boxes in to new geoJSON
 		var newFeatureProperties = {};
 		for (var i = 1; i < iw_form.elements.length; i++) { //skips first element (osm_id)
@@ -203,7 +232,10 @@ var map = (function() {
 		} catch(e) {
 			window.alert("Invalid GeoJSON");
 		}
+	}
 
+	function cancelAdd() {
+		selectedLayer.clearLayers();
 		cancel('info_window');
 	}
 
@@ -215,6 +247,7 @@ var map = (function() {
 		addFeature: addFeature,
 		addProperty: addProperty,
 		deleteFeature: deleteFeature,
-		editFeature: editFeature
+		editFeature: editFeature,
+		cancelAdd: cancelAdd
 	};
 })();
