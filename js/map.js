@@ -4,13 +4,24 @@ var map = (function() {
 	var infoWindow = document.getElementById('info_window');
 	var iw_form = document.getElementById('iw_form_parent');	
 	var map = null;
-	var geojson = null;
+	var properties = null;
+	var geojson = L.geoJson([], {
+		style: 	{	"color": "#ff7800",
+   						"weight": 5,
+							"opacity": 0.65
+			},
+		onEachFeature: popupWindow
+		});
+	var editingLayers = L.geoJson([], {
+		style: 	{	"weight": 5,
+							"opacity": 0.65
+			},
+		onEachFeature: popupWindow
+		});
 	var lastFeature = null;
 
 	function initMap() {
 		// Create the Map
-		infoWindow_old = new google.maps.InfoWindow({})
-
 		map = L.map('map', {
 			center: [39.7488835, -105.2167468],
 			zoom: 15,
@@ -22,22 +33,35 @@ var map = (function() {
 		    accessToken: 'pk.eyJ1IjoidHdhbGtlcjE0NjQiLCJhIjoiY2ozZzN0bHA2MDF4ZDJxb2lpdTc0OXBodSJ9.cRI1-1g_vdffzX2jG3aY8A'
 		}).addTo(map);
 
-		// set up geoJSON
-		geojson = L.geoJson([], {
-			style: 	{	"color": "#ff7800",
-   						"weight": 5,
-						"opacity": 0.65
-					},
-			onEachFeature: function popupWindow(feature, layer) {
-				layer.on('click', function (e) {
-					lastFeature = feature;
-					infoWindow.style.display = "";
-					console.log(feature.properties);
+		// draw toolbar
+		map.addControl(new L.Control.Draw({
+			draw: {
+				circle: false
+		}}));
+
+		// draw new shape
+		map.on(L.Draw.Event.CREATED, function (e) {
+			var type = e.layerType;
+			var layer = e.layer;
+			editingLayers.addData(layer.toGeoJSON());
+			addFeature(layer.toGeoJSON());
+		});
+
+		geojson.addTo(map);
+		editingLayers.addTo(map);
+	}
+
+	function popupWindow(feature, layer) {
+		layer.on('click', function (e) {
+			lastFeature = feature;
+			infoWindow.style.display = "";
+			console.log(feature.properties);
 					iw_form.innerHTML = "<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='osm_id' class='label label-primary'>OSM ID</span></div><div class='col-md-8 col-sm-12'><input type='text' name='osm_id' id='osm_id' class='form-control' value="
 						+ feature.id + " disabled></div></div>";
 
 					for (var key in feature.properties) {
 						if (feature.properties.hasOwnProperty(key)) {
+							properties.push(key);
 							iw_form.innerHTML+="<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='"
 								+ key +"' class='label label-info'>" + key 
 								+ "</span></div><div class='col-md-8 col-sm-12'><input type='text' class='form-control' name='"
@@ -46,9 +70,6 @@ var map = (function() {
 					}
 				});
 			}
-		});
-		geojson.addTo(map);
-	}
 
 	function submitPointQuery() {
 		// queries a single s2cell
@@ -134,16 +155,17 @@ var map = (function() {
 		}
 	}
 
-	function addFeature() {
-		// adds new feature from pure JSON
-		geometry = { "type":"Node", "coordinates":[-105.2165554103375,39.748910981699794] }
-		lastFeature = { "geometry":geometry, "properties":null};
+	function addFeature(feature) {
+		lastFeature = feature;
 		infoWindow.style.display = "";
 		iw_form.innerHTML = "";
+		properties = [];
 	}
 
 	function addProperty() {
 		var key = prompt("New property:", "key");
+		if (properties.indexOf(key) > -1) return;	// if key already in properties, don't add
+		properties.push(key);
 		iw_form.innerHTML+="<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='"
 			+ key + "' class='label label-info'>" + key 
 			+ "</span></div><div class='col-md-8 col-sm-12'><input type='text' class='form-control' name='"
@@ -165,31 +187,23 @@ var map = (function() {
 			newFeatureProperties[iw_form.elements[i].id] = iw_form.elements[i].value;
 		}
 
-		if (lastFeature.properties === null) {
-			// adding new feature
-			try {
-				// check if valid geoJSON
-				geojson.addData(newFeature);
-
+		var newFeature = lastFeature;
+		newFeature.properties = newFeatureProperties
+		try {
+			// check if valid geoJSON
+			geojson.addData(newFeature);
+			if (!lastFeature.hasOwnProperty('id')) {
 				// send new feature to thrift for processing TODO: FINISH
 				console.log("to thrift: add " + JSON.stringify(newFeature));
-			} catch(e) {
-				window.alert("Invalid GeoJSON");
-			}
-		} else if (JSON.stringify(newFeatureProperties) != JSON.stringify(lastFeature.properties)) {
-			// updating feature
-			try {
-				// check if valid geoJSON
-				var newFeature = lastFeature;
-				newFeature.properties = newFeatureProperties	
-				geojson.addData(newFeature);
-
-				// send new feature to thrift for processing TODO: FINISH
+			} else if (JSON.stringify(newFeatureProperties) != JSON.stringify(lastFeature.properties)) {
+				// send edited feature to thrift for processing TODO: FINISH
 				console.log("to thrift: update " + lastFeature.id + " to " + JSON.stringify(newFeature));
-			} catch(e) {
-				window.alert("Invalid GeoJSON");
+
 			}
+		} catch(e) {
+			window.alert("Invalid GeoJSON");
 		}
+
 		cancel('info_window');
 	}
 
