@@ -16,7 +16,7 @@ var map = (function() {
 		},
 		}).on('layeradd', function(e) { lastLayer = e.layer; });
 	var selectedLayer = L.geoJson([], {
-		style: 	{	"color": "#ffff00",
+		style: 	{	"color": "#00ff00",
    						"weight": 5,
 							"opacity": 0.65
 		},
@@ -57,9 +57,16 @@ var map = (function() {
 
 		// when new shape finished
 		map.on(L.Draw.Event.CREATED, function (e) {
+			// dehighlight last feature
+			if (!(lastFeature === null)) {
+				if (lastFeature.hasOwnProperty('id')) { geojson.addData(lastFeature); }
+				else { editingLayers.addData(lastFeature); }
+			}
+
+			// add feature
 			var type = e.layerType;
-			lastLayer = e.layer.toGeoJSON();
-			editingLayers.addData(lastLayer);
+			editingLayers.addData(e.layer.toGeoJSON());	// need to run this to access the layer of the feature
+			editingLayers.removeLayer(lastLayer);
 			addFeature(lastLayer.feature);
 		});
 
@@ -70,6 +77,12 @@ var map = (function() {
 
 	function popupWindow(feature, layer) {
 		layer.on('click', function (e) {
+			// dehighlight last feature
+			if (!(lastFeature === null)) {
+				if (lastFeature.hasOwnProperty('id')) { geojson.addData(lastFeature); }
+				else { editingLayers.addData(lastFeature); }
+			}
+
 			lastFeature = feature;
 			lastLayer = layer;
 
@@ -91,6 +104,8 @@ var map = (function() {
 
 			// highlight this feature
 			selectedLayer.clearLayers();
+			editingLayers.removeLayer(layer);
+			geojson.removeLayer(layer);
 			selectedLayer.addData(feature);
 		});
 	}
@@ -220,13 +235,12 @@ var map = (function() {
 		selectedLayer.clearLayers();
 		editingLayers.removeLayer(lastLayer);
 		geojson.removeLayer(lastLayer);
+		lastLayer = lastFeature = null;		
 	}
 
 	function editFeature() {
 		// hide panel and remove feature from edit/select layers
-		cancel('info_window');
-		selectedLayer.clearLayers();
-		editingLayers.removeLayer(lastLayer);
+		cancelAdd();
 
 		// read all boxes in to new geoJSON
 		var newFeatureProperties = {};
@@ -259,8 +273,12 @@ var map = (function() {
 	}
 
 	function cancelAdd() {
-		// closes the window
+		// de-highlights
 		selectedLayer.clearLayers();
+		if (lastFeature.hasOwnProperty('id')) { geojson.addData(lastFeature); }
+		else { editingLayers.addData(lastFeature); }
+		lastLayer = lastFeature = null;
+
 		cancel('info_window');
 	}
 
