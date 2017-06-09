@@ -184,10 +184,10 @@ var map = (function() {
 			for (var key in feature.properties) {
 				if (feature.properties.hasOwnProperty(key)) {
 					properties.push(key);
-					iw_form.innerHTML+="<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='"
+					$("#iw_form_parent").append("<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='"
 						+ key +"' class='label label-info'>" + key 
 						+ "</span></div><div class='col-md-8 col-sm-12'><input type='text' class='form-control' name='"
-						+ key + "' id='" + key + "' value='" + feature.properties[key] + "'></div></div>";
+						+ key + "' id='" + key + "' value='" + feature.properties[key] + "'></div></div>");
 				}
 			}
 
@@ -204,10 +204,10 @@ var map = (function() {
 		var key = prompt("New property:", "key");
 		if (properties.indexOf(key) > -1) return;	// if key already in properties, don't add
 		properties.push(key);
-		iw_form.innerHTML+="<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='"
+		$("#iw_form_parent").append("<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='"
 			+ key + "' class='label label-info'>" + key 
 			+ "</span></div><div class='col-md-8 col-sm-12'><input type='text' class='form-control' name='"
-			+ key + "' id='" + key + "' placeholder='value'></div></div>";
+			+ key + "' id='" + key + "' placeholder='value'></div></div>");
 		document.getElementById(key).focus();
 		document.getElementById(key).select()
 	}
