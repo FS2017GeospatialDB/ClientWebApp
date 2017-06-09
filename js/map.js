@@ -214,12 +214,12 @@ var map = (function() {
 	
 	function deleteFeature() {
 		if (lastFeature.hasOwnProperty('id')) {
-			// send feature id to thrift for deletion TODO: TEST
+			// send feature id to thrift for deletion TODO: TEST / FINISH ERROR HANDLING
 			console.log("to thrift: delete " + lastFeature.id);
 			var transport = new Thrift.TXHRTransport("http://localhost:8000/service");
 			var protocol = new Thrift.TJSONProtocol(transport);
 			var client = new GeolocationServiceClient(protocol);
-//			var status = client.deleteFeature(lastFeature.id);
+			var status = client.deleteFeature(lastFeature.id);
 		}
 
 		// hide panel and remove feature from all layers
@@ -255,19 +255,20 @@ var map = (function() {
 		if (!lastFeature.hasOwnProperty('id')) {	// NEW FEATURE
 			// send new feature to thrift for processing TODO: TEST							
 			console.log("to thrift: add " + JSON.stringify(feature));
-//			var id = client.updateFeature(-1, JSON.stringify(newFeature));
-			var id = 1; // TEMP TODO REMOVE
-			if (id != -1) {
+			var id = client.updateFeature("new", JSON.stringify(feature));
+//			var id = 1; // TEMP TODO REMOVE
+			if (id != "failure") {
 				feature.id = id;
 				geojson.addData(feature);
 			} else {	// failure code
 				editingLayers.addData(feature);
 			}
+			console.log(id);
 		} else if (JSON.stringify(newFeatureProperties) != JSON.stringify(oldFeatureProperties)) {	// EDIT FEATURE
 			// send edited feature to thrift for processing TODO: TEST
 			console.log("to thrift: update " + feature.id + " to " + JSON.stringify(feature));
-//			var id = client.updateFeature(lastFeature.id, JSON.stringify(newFeature));
-			var id = feature.id; // TEMP TODO REMOVE
+			var id = client.updateFeature(lastFeature.id, JSON.stringify(feature));
+//			var id = feature.id; // TEMP TODO REMOVE
 			if (id == feature.id) {
 				geojson.addData(feature);
 			} else {	// failure code from thrift
