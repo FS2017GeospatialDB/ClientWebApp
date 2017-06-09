@@ -63,11 +63,15 @@ var map = (function() {
 				else { editingLayers.addData(lastFeature); }
 			}
 
-			// add feature
-			var type = e.layerType;
-			editingLayers.addData(e.layer.toGeoJSON());	// need to run this to access the layer of the feature
-			editingLayers.removeLayer(lastLayer);
-			addFeature(lastLayer.feature);
+			// Opens an empty properties panel
+			infoWindow.style.display = "";
+			iw_form.innerHTML = "";
+			properties = [];
+
+			// highlight this feature
+			lastFeature = e.layer.toGeoJSON();
+			selectedLayer.clearLayers();
+			selectedLayer.addData(lastFeature);
 		});
 
 		geojson.addTo(map);
@@ -195,18 +199,6 @@ var map = (function() {
 		});
 	}
 
-	function addFeature(feature) {
-		// Opens properties panel
-		lastFeature = feature;
-		infoWindow.style.display = "";
-		iw_form.innerHTML = "";
-		properties = [];
-
-		// highlight this feature
-		selectedLayer.clearLayers();
-		selectedLayer.addData(feature);
-	}
-
 	function addProperty() {
 		// adds new value to properties panel for more custom features
 		var key = prompt("New property:", "key");
@@ -227,7 +219,7 @@ var map = (function() {
 			var transport = new Thrift.TXHRTransport("http://localhost:8000/service");
 			var protocol = new Thrift.TJSONProtocol(transport);
 			var client = new GeolocationServiceClient(protocol);
-//			client.deleteFeature(lastFeature.id);
+//			var status = client.deleteFeature(lastFeature.id);
 		}
 
 		// hide panel and remove feature from all layers
@@ -240,7 +232,6 @@ var map = (function() {
 
 	function editFeature() {
 		// hide panel and remove feature from layers
-		selectedLayer.clearLayers();
 		editingLayers.removeLayer(lastLayer);
 		geojson.removeLayer(lastLayer);
 		cancel('info_window');
@@ -250,41 +241,46 @@ var map = (function() {
 		for (var i = 1; i < iw_form.elements.length; i++) { //skips first element (osm_id)
 			newFeatureProperties[iw_form.elements[i].id] = iw_form.elements[i].value;
 		}
+		var oldFeatureProperties = lastFeature.properties;
 
-		try {
-			// set up thrift
-			var transport = new Thrift.TXHRTransport("http://localhost:8000/service");
-			var protocol = new Thrift.TJSONProtocol(transport);
-			var client = new GeolocationServiceClient(protocol);
-			if (!lastFeature.hasOwnProperty('id')) {
-				// check if valid geoJSON							
-				var newFeature = lastFeature;
-				newFeature.properties = newFeatureProperties;
-				geojson.addData(newFeature);
+		// set up thrift
+		var transport = new Thrift.TXHRTransport("http://localhost:8000/service");
+		var protocol = new Thrift.TJSONProtocol(transport);
+		var client = new GeolocationServiceClient(protocol);
 
-				// send new feature to thrift for processing TODO: TEST							
-				console.log("to thrift: add " + JSON.stringify(newFeature));
-//				client.updateFeature(-1, JSON.stringify(newFeature));
-			} else if (JSON.stringify(newFeatureProperties) != JSON.stringify(lastFeature.properties)) {
-				// check if valid geoJSON
-				var newFeature = lastFeature;
-				newFeature.properties = newFeatureProperties;
-				geojson.addData(newFeature);
+		// feature starts with base of old feature, with new properties
+		var feature = lastFeature;
+		feature.properties = newFeatureProperties;
 
-				// send edited feature to thrift for processing TODO: TEST
-				console.log("to thrift: update " + lastFeature.id + " to " + JSON.stringify(newFeature));
-//				client.updateFeature(lastFeature.id, JSON.stringify(newFeature));				
-			} else {
-				// add back to geojson layer
-				geojson.addData(lastFeature);
+		if (!lastFeature.hasOwnProperty('id')) {	// NEW FEATURE
+			// send new feature to thrift for processing TODO: TEST							
+			console.log("to thrift: add " + JSON.stringify(feature));
+//			var id = client.updateFeature(-1, JSON.stringify(newFeature));
+			var id = 1; // TEMP TODO REMOVE
+			if (id != -1) {
+				feature.id = id;
+				geojson.addData(feature);
+			} else {	// failure code
+				editingLayers.addData(feature);
 			}
-		} catch(e) {
-			console.log(e);
-			window.alert("Invalid GeoJSON");
-			// failed: move layer back to previous state
-			if (lastFeature.hasOwnProperty('id')) { geojson.addData(lastFeature); }
-			else { editingLayers.addData(lastFeature); }
+		} else if (JSON.stringify(newFeatureProperties) != JSON.stringify(oldFeatureProperties)) {	// EDIT FEATURE
+			// send edited feature to thrift for processing TODO: TEST
+			console.log("to thrift: update " + feature.id + " to " + JSON.stringify(feature));
+//			var id = client.updateFeature(lastFeature.id, JSON.stringify(newFeature));
+			var id = feature.id; // TEMP TODO REMOVE
+			if (id == feature.id) {
+				geojson.addData(feature);
+			} else {	// failure code from thrift
+				feature.properties = oldFeatureProperties; // revert property changes
+				geojson.addData(feature);
+			}
+		} else {		// NO CHANGE
+			geojson.addData(feature);
 		}
+
+		// de-highlight
+		selectedLayer.clearLayers();
+		lastLayer = lastFeature = null;
 	}
 
 	function cancelAdd() {
@@ -302,7 +298,6 @@ var map = (function() {
 		initMap: initMap,
 		submitRegionQuery: submitRegionQuery,
 		submitPointQuery: submitPointQuery,
-		addFeature: addFeature,
 		addProperty: addProperty,
 		deleteFeature: deleteFeature,
 		editFeature: editFeature,
