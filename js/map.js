@@ -115,6 +115,7 @@ var map = (function() {
 			}
 
 			console.log(JSON.stringify(json));
+			json.id = json.properties.osm_id;
 			geojson.addData(json);
 		}
 	}
@@ -159,7 +160,8 @@ var map = (function() {
 					if (json.geometry.type === 'Polygon' && json.geometry.coordinates[j][k].length > 2)
 						json.geometry.coordinates[j][k] = json.geometry.coordinates[j][k].slice(0, 2);
 			}
-			json.id = json.id + "_" + Math.random().toString(36).substring(7);	
+			json.id = json.properties.osm_id;
+			json.properties.osm_id = json.id + "_" + Math.random().toString(36).substring(7);	
 			geojson.addData(json);
 		}
 	}
@@ -182,7 +184,7 @@ var map = (function() {
 			properties = [];
 
 			for (var key in feature.properties) {
-				if (feature.properties.hasOwnProperty(key)) {
+				if (feature.properties.hasOwnProperty(key) && !(feature.properties[key] === null)) {
 					properties.push(key);
 					$("#iw_form_parent").append("<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='"
 						+ key +"' class='label label-info'>" + key 
