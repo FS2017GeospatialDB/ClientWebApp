@@ -305,6 +305,14 @@ var map = (function() {
 		cancel('info_window');
 	}
 
+	function hideFeature() {
+		selectedLayer.clearLayers();
+		editingLayers.removeLayer(lastLayer);
+		geojson.removeLayer(lastLayer);
+		lastLayer = lastFeature = null;
+		cancel('info_window');
+	}
+
 	// Module Exports
 	return {
 		initMap: initMap,
@@ -313,6 +321,7 @@ var map = (function() {
 		addProperty: addProperty,
 		deleteFeature: deleteFeature,
 		editFeature: editFeature,
-		cancelAdd: cancelAdd
+		cancelAdd: cancelAdd,
+		hideFeature: hideFeature
 	};
 })();
