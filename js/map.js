@@ -160,8 +160,7 @@ var map = (function() {
 					if (json.geometry.type === 'Polygon' && json.geometry.coordinates[j][k].length > 2)
 						json.geometry.coordinates[j][k] = json.geometry.coordinates[j][k].slice(0, 2);
 			}
-			json.id = json.properties.osm_id;
-			json.properties.osm_id = json.id + "_" + Math.random().toString(36).substring(7);	
+			json.id = json.geometry.type + '/' + json.properties.osm_id;
 			geojson.addData(json);
 		}
 	}
@@ -184,9 +183,10 @@ var map = (function() {
 			properties = [];
 
 			for (var key in feature.properties) {
-				if (feature.properties.hasOwnProperty(key) && !(feature.properties[key] === null)) {
+				if (feature.properties.hasOwnProperty(key)) {
 					properties.push(key);
-					$("#iw_form_parent").append("<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='"
+					hide = (feature.properties[key] === null) ? "style='display: none'" : "";
+					$("#iw_form_parent").append("<div class='row'><div class='form-group' " + hide + "><div class='col-md-4 col-sm-12'><span for='"
 						+ key +"' class='label label-info'>" + key 
 						+ "</span></div><div class='col-md-8 col-sm-12'><input type='text' class='form-control' name='"
 						+ key + "' id='" + key + "' value='" + feature.properties[key] + "'></div></div>");
@@ -204,7 +204,16 @@ var map = (function() {
 	function addProperty() {
 		// adds new value to properties panel for more custom features
 		var key = prompt("New property:", "key");
-		if (properties.indexOf(key) > -1) return;	// if key already in properties, don't add
+		if (properties.indexOf(key) > -1) {
+			var field = document.getElementById(key);
+			if (field.value == "null") {		// show the null field
+				field.value = "";
+				field.parentElement.parentElement.style.display = "";
+				document.getElementById(key).focus();
+				document.getElementById(key).select()
+			}
+			return;	// if key already in properties, don't add
+		}
 		properties.push(key);
 		$("#iw_form_parent").append("<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='"
 			+ key + "' class='label label-info'>" + key 
@@ -241,7 +250,7 @@ var map = (function() {
 		// read all boxes in to new geoJSON
 		var newFeatureProperties = {};
 		for (var i = 1; i < iw_form.elements.length; i++) { //skips first element (osm_id)
-			newFeatureProperties[iw_form.elements[i].id] = iw_form.elements[i].value;
+			newFeatureProperties[iw_form.elements[i].id] = (iw_form.elements[i].value == "null") ? null : iw_form.elements[i].value;
 		}
 		var oldFeatureProperties = lastFeature.properties;
 
