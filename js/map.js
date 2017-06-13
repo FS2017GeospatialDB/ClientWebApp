@@ -150,8 +150,9 @@ var map = (function() {
 
 		// Add new GeoJSON's to Map
 		for (var i = 0; i < result.length; i++) {
-			json = JSON.parse(result[i].json);
-
+			try {
+				json = JSON.parse(result[i].json);
+			} catch(e) { console.log(result[i]);}
 			// GeoJSON Formatting Hack
 			for (var j = 0; j < json.geometry.coordinates.length; j++) {
 				if (json.geometry.type === 'LineString' && json.geometry.coordinates[j].length > 2)
