@@ -160,7 +160,11 @@ var map = (function() {
 					if (json.geometry.type === 'Polygon' && json.geometry.coordinates[j][k].length > 2)
 						json.geometry.coordinates[j][k] = json.geometry.coordinates[j][k].slice(0, 2);
 			}
-			json.id = json.geometry.type + '/' + json.properties.osm_id;
+			if (!(json.properties.osm_id === null)) {
+				json.id = json.geometry.type + '/' + json.properties.osm_id;
+			} else {
+				json.id = json.geometry.type + '/' + json.properties.osm_way_id;
+			}
 			geojson.addData(json);
 		}
 	}
@@ -264,7 +268,8 @@ var map = (function() {
 		feature.properties = newFeatureProperties;
 
 		if (!lastFeature.hasOwnProperty('id')) {	// NEW FEATURE
-			// send new feature to thrift for processing TODO: TEST							
+			// send new feature to thrift for processing TODO: TEST
+			feature.id = "tempOSM_ID_placeholder";
 			console.log("to thrift: add " + JSON.stringify(feature));
 			var id = client.updateFeature("new", JSON.stringify(feature));
 //			var id = 1; // TEMP TODO REMOVE
