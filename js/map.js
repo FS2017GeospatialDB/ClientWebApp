@@ -65,7 +65,8 @@ var map = (function() {
 
 			// Opens an empty properties panel
 			infoWindow.style.display = "";
-			iw_form.innerHTML = "";
+			iw_form.innerHTML = "<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='osm_id' class='label label-primary'>OSM ID</span></div><div class='col-md-8 col-sm-12'><input type='text' name='osm_id' id='osm_id' class='form-control' value="
+				+ "undefined" + " disabled></div></div>";
 			properties = [];
 
 			// highlight this feature
@@ -96,28 +97,28 @@ var map = (function() {
 		var transport = new Thrift.TXHRTransport("http://localhost:8000/service");
 		var protocol = new Thrift.TJSONProtocol(transport);
 		var client = new GeolocationServiceClient(protocol);
-		var result = client.getCell(lat, lng, Date.now() /*timestamp.getTime()*/);
-
-		// Clear the Map
-		geojson.clearLayers();
+		client.getCell(lat, lng, Date.now() /*timestamp.getTime()*/, function (result) {
+			// Clear the Map
+			geojson.clearLayers();
 		
-		// Add new GeoJSON's to Map
-		for (var i = 0; i < result.length; i++) {
-			json = JSON.parse(result[i].json);
+			// Add new GeoJSON's to Map
+			for (var i = 0; i < result.length; i++) {
+				json = JSON.parse(result[i].json);
 
-			// GeoJSON Formatting Hack
-			for (var j = 0; j < json.geometry.coordinates.length; j++) {
-				if (json.geometry.type === 'LineString' && json.geometry.coordinates[j].length > 2)
-					json.geometry.coordinates[j] = json.geometry.coordinates[j].slice(0, 2);
-				for (var k = 0; k < json.geometry.coordinates[j].length; k++)
-					if (json.geometry.type === 'Polygon' && json.geometry.coordinates[j][k].length > 2)
-						json.geometry.coordinates[j][k] = json.geometry.coordinates[j][k].slice(0, 2);
+				// GeoJSON Formatting Hack
+				for (var j = 0; j < json.geometry.coordinates.length; j++) {
+					if (json.geometry.type === 'LineString' && json.geometry.coordinates[j].length > 2)
+						json.geometry.coordinates[j] = json.geometry.coordinates[j].slice(0, 2);
+					for (var k = 0; k < json.geometry.coordinates[j].length; k++)
+						if (json.geometry.type === 'Polygon' && json.geometry.coordinates[j][k].length > 2)
+							json.geometry.coordinates[j][k] = json.geometry.coordinates[j][k].slice(0, 2);
+				}
+
+				console.log(JSON.stringify(json));
+				json.id = json.properties.osm_id;
+				geojson.addData(json);
 			}
-
-			console.log(JSON.stringify(json));
-			json.id = json.properties.osm_id;
-			geojson.addData(json);
-		}
+		});
 	}
 
 	function submitRegionQuery() {
@@ -143,31 +144,33 @@ var map = (function() {
 		var transport = new Thrift.TXHRTransport("http://localhost:8000/service");
 		var protocol = new Thrift.TJSONProtocol(transport);
 		var client = new GeolocationServiceClient(protocol);
-		var result = client.getFeatures(west, east, south, north, time);
+		var result = client.getFeatures(west, east, south, north, time, function (result) { 
+			// Clear the Map
+			geojson.clearLayers();
 
-		// Clear the Map
-		geojson.clearLayers();
-
-		// Add new GeoJSON's to Map
-		for (var i = 0; i < result.length; i++) {
-			try {
-				json = JSON.parse(result[i].json);
-			} catch(e) { console.log(result[i]);}
-			// GeoJSON Formatting Hack
-			for (var j = 0; j < json.geometry.coordinates.length; j++) {
-				if (json.geometry.type === 'LineString' && json.geometry.coordinates[j].length > 2)
-					json.geometry.coordinates[j] = json.geometry.coordinates[j].slice(0, 2);
-				for (var k = 0; k < json.geometry.coordinates[j].length; k++)
-					if (json.geometry.type === 'Polygon' && json.geometry.coordinates[j][k].length > 2)
-						json.geometry.coordinates[j][k] = json.geometry.coordinates[j][k].slice(0, 2);
+			// Add new GeoJSON's to Map
+			for (var i = 0; i < result.length; i++) {
+				try {
+					json = JSON.parse(result[i].json);
+				} catch(e) { console.log(result[i]);}
+				// GeoJSON Formatting Hack
+				for (var j = 0; j < json.geometry.coordinates.length; j++) {
+					if (json.geometry.type === 'LineString' && json.geometry.coordinates[j].length > 2)
+						json.geometry.coordinates[j] = json.geometry.coordinates[j].slice(0, 2);
+					for (var k = 0; k < json.geometry.coordinates[j].length; k++)
+						if (json.geometry.type === 'Polygon' && json.geometry.coordinates[j][k].length > 2)
+							json.geometry.coordinates[j][k] = json.geometry.coordinates[j][k].slice(0, 2);
+				}
+				if (!('id' in json)) {
+					if (!(json.properties.osm_id === null)) {
+						json.id = json.geometry.type + '/' + json.properties.osm_id;
+					} else {
+						json.id = json.geometry.type + '/' + json.properties.osm_way_id;
+					}
+				}
+				geojson.addData(json);
 			}
-			if (!(json.properties.osm_id === null)) {
-				json.id = json.geometry.type + '/' + json.properties.osm_id;
-			} else {
-				json.id = json.geometry.type + '/' + json.properties.osm_way_id;
-			}
-			geojson.addData(json);
-		}
+		});
 	}
 
 	function popupWindow(feature, layer) {
@@ -269,23 +272,17 @@ var map = (function() {
 		feature.properties = newFeatureProperties;
 
 		if (!lastFeature.hasOwnProperty('id')) {	// NEW FEATURE
-			// send new feature to thrift for processing TODO: TEST
 			feature.id = "tempOSM_ID_placeholder";
+			feature.properties.osm_id = "tempOSM_ID_placeholder";
 			console.log("to thrift: add " + JSON.stringify(feature));
 			var id = client.updateFeature("new", JSON.stringify(feature));
-//			var id = 1; // TEMP TODO REMOVE
-			if (id != "failure") {
-				feature.id = id;
-				geojson.addData(feature);
-			} else {	// failure code
-				editingLayers.addData(feature);
-			}
+			feature.id = id;
+			feature.properties.osm_id = id;
+			geojson.addData(feature);
 			console.log(id);
 		} else if (JSON.stringify(newFeatureProperties) != JSON.stringify(oldFeatureProperties)) {	// EDIT FEATURE
-			// send edited feature to thrift for processing TODO: TEST
 			console.log("to thrift: update " + feature.id + " to " + JSON.stringify(feature));
 			var id = client.updateFeature(lastFeature.id, JSON.stringify(feature));
-//			var id = feature.id; // TEMP TODO REMOVE
 			if (id == feature.id) {
 				geojson.addData(feature);
 			} else {	// failure code from thrift
