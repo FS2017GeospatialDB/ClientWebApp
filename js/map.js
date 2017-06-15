@@ -65,7 +65,7 @@ var map = (function() {
 
 			// Opens an empty properties panel
 			infoWindow.style.display = "";
-			iw_form.innerHTML = "<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='osm_id' class='label label-primary'>OSM ID</span></div><div class='col-md-8 col-sm-12'><input type='text' name='osm_id' id='osm_id' class='form-control' value="
+			iw_form.innerHTML = "<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='db_id' class='label label-primary'>OSM ID</span></div><div class='col-md-8 col-sm-12'><input type='text' name='db_id' id='db_id' class='form-control' value="
 				+ "undefined" + " disabled></div></div>";
 			properties = [];
 
@@ -182,7 +182,7 @@ var map = (function() {
 
 			// create info panel
 			infoWindow.style.display = "";
-			iw_form.innerHTML = "<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='osm_id' class='label label-primary'>OSM ID</span></div><div class='col-md-8 col-sm-12'><input type='text' name='osm_id' id='osm_id' class='form-control' value="
+			iw_form.innerHTML = "<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='db_id' class='label label-primary'>OSM ID</span></div><div class='col-md-8 col-sm-12'><input type='text' name='db_id' id='db_id' class='form-control' value="
 				+ feature.id + " disabled></div></div>";
 			properties = [];
 
@@ -192,8 +192,9 @@ var map = (function() {
 					hide = (feature.properties[key] === null) ? "style='display: none'" : "";
 					$("#iw_form_parent").append("<div class='row'><div class='form-group' " + hide + "><div class='col-md-4 col-sm-12'><span for='"
 						+ key +"' class='label label-info'>" + key 
-						+ "</span></div><div class='col-md-8 col-sm-12'><input type='text' class='form-control' name='"
-						+ key + "' id='" + key + "' value='" + feature.properties[key] + "'></div></div>");
+						+ "</span></div><div class='col-md-6 col-xs-9 no-pad-right'><input type='text' class='form-control' name='"
+						+ key + "' id='" + key + "' value='" + feature.properties[key] + "'></div>"
+						+ "<div class='col-xs-3 col-md-2 no-pad-left'><button type='button' class='btn btn-danger btn-block' onclick='map.removeProperty(\"" + key + "\")'>X</button></div></div>");
 				}
 			}
 
@@ -219,12 +220,20 @@ var map = (function() {
 			return;	// if key already in properties, don't add
 		}
 		properties.push(key);
-		$("#iw_form_parent").append("<div class='row'><div class='form-group'><div class='col-md-4 col-sm-12'><span for='"
+		$("#iw_form_parent").append("<div class='row'><div class='form-group'><div class='col-md-4 col-xs-12'><span for='"
 			+ key + "' class='label label-info'>" + key 
-			+ "</span></div><div class='col-md-8 col-sm-12'><input type='text' class='form-control' name='"
-			+ key + "' id='" + key + "' placeholder='value'></div></div>");
+			+ "</span></div><div class='col-md-6 col-xs-9 no-pad-right'><input type='text' class='form-control' name='"
+			+ key + "' id='" + key + "' placeholder='value'></div>"
+			+ "<div class='col-xs-3 col-md-2 no-pad-left'><button type='button' class='btn btn-danger btn-block' onclick='map.removeProperty(\"" + key + "\")'>X</button></div></div>");
 		document.getElementById(key).focus();
 		document.getElementById(key).select()
+	}
+
+	function removeProperty(input_id) {
+		console.log(iw_form);
+		var property = document.getElementById(input_id).parentElement.parentElement.parentElement;	// nested garbage
+		iw_form.removeChild(property);
+		console.log(iw_form);
 	}
 	
 	function deleteFeature() {
@@ -253,7 +262,7 @@ var map = (function() {
 
 		// read all boxes in to new geoJSON
 		var newFeatureProperties = {};
-		for (var i = 1; i < iw_form.elements.length; i++) { //skips first element (osm_id)
+		for (var i = 1; i < iw_form.elements.length; i++) { //skips first element (db_id)
 			newFeatureProperties[iw_form.elements[i].id] = (iw_form.elements[i].value == "null") ? null : iw_form.elements[i].value;
 		}
 		var oldFeatureProperties = lastFeature.properties;
@@ -318,9 +327,10 @@ var map = (function() {
 		submitRegionQuery: submitRegionQuery,
 		submitPointQuery: submitPointQuery,
 		addProperty: addProperty,
+		removeProperty: removeProperty,
 		deleteFeature: deleteFeature,
 		editFeature: editFeature,
 		cancelAdd: cancelAdd,
-		hideFeature: hideFeature
+		hideFeature: hideFeature,
 	};
 })();
