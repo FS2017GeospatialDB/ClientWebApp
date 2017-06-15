@@ -83,12 +83,13 @@ var map = (function() {
 	function submitPointQuery() {
 		// queries a single s2cell
 
-		var date = document.getElementById('calendar').value;
-		timestamp = new Date(date);
-		timestamp.setHours(document.getElementById('ts_hours').value);
-		timestamp.setMinutes(document.getElementById('ts_minutes').value);
-		timestamp.setSeconds(document.getElementById('ts_seconds').value);
-		console.log(timestamp.getTime());
+		if (document.getElementById('hqToggle').children[0].checked) {
+			var date = document.getElementById('calendar').value;
+			timestamp = new Date(date);
+			timestamp.setHours(document.getElementById('ts_hours').value);
+			timestamp.setMinutes(document.getElementById('ts_minutes').value);
+			timestamp.setSeconds(document.getElementById('ts_seconds').value);
+		} else { time = Date.now(); }
 
 		var center = map.getCenter();
 		var lat = center.lat;
@@ -98,26 +99,7 @@ var map = (function() {
 		var protocol = new Thrift.TJSONProtocol(transport);
 		var client = new GeolocationServiceClient(protocol);
 		client.getCell(lat, lng, Date.now() /*timestamp.getTime()*/, function (result) {
-			// Clear the Map
-			geojson.clearLayers();
-		
-			// Add new GeoJSON's to Map
-			for (var i = 0; i < result.length; i++) {
-				json = JSON.parse(result[i].json);
-
-				// GeoJSON Formatting Hack
-				for (var j = 0; j < json.geometry.coordinates.length; j++) {
-					if (json.geometry.type === 'LineString' && json.geometry.coordinates[j].length > 2)
-						json.geometry.coordinates[j] = json.geometry.coordinates[j].slice(0, 2);
-					for (var k = 0; k < json.geometry.coordinates[j].length; k++)
-						if (json.geometry.type === 'Polygon' && json.geometry.coordinates[j][k].length > 2)
-							json.geometry.coordinates[j][k] = json.geometry.coordinates[j][k].slice(0, 2);
-				}
-
-				console.log(JSON.stringify(json));
-				json.id = json.properties.osm_id;
-				geojson.addData(json);
-			}
+			parseResults(result);
 		});
 	}
 
@@ -133,7 +115,6 @@ var map = (function() {
 			timestamp.setSeconds(document.getElementById('ts_seconds').value);
 			time = timestamp.getTime();
 		} else { time = Date.now(); }
-		console.log(time);
 
 		var bounds = map.getBounds();
 		var east = bounds.getEast();
@@ -145,33 +126,38 @@ var map = (function() {
 		var protocol = new Thrift.TJSONProtocol(transport);
 		var client = new GeolocationServiceClient(protocol);
 		var result = client.getFeatures(west, east, south, north, time, function (result) { 
-			// Clear the Map
-			geojson.clearLayers();
-
-			// Add new GeoJSON's to Map
-			for (var i = 0; i < result.length; i++) {
-				try {
-					json = JSON.parse(result[i].json);
-				} catch(e) { console.log(result[i]);}
-				// GeoJSON Formatting Hack
-				for (var j = 0; j < json.geometry.coordinates.length; j++) {
-					if (json.geometry.type === 'LineString' && json.geometry.coordinates[j].length > 2)
-						json.geometry.coordinates[j] = json.geometry.coordinates[j].slice(0, 2);
-					for (var k = 0; k < json.geometry.coordinates[j].length; k++)
-						if (json.geometry.type === 'Polygon' && json.geometry.coordinates[j][k].length > 2)
-							json.geometry.coordinates[j][k] = json.geometry.coordinates[j][k].slice(0, 2);
-				}
-				if (!('id' in json)) {
-					if (!(json.properties.osm_id === null)) {
-						json.id = json.geometry.type + '/' + json.properties.osm_id;
-					} else {
-						json.id = json.geometry.type + '/' + json.properties.osm_way_id;
-					}
-				}
-				geojson.addData(json);
-			}
+			parseResults(result);
 		});
 	}
+
+	function parseResults(result) {
+		// Clear the Map
+		geojson.clearLayers();
+
+		// Add new GeoJSON's to Map
+		for (var i = 0; i < result.length; i++) {
+			try {
+				json = JSON.parse(result[i].json);
+			} catch(e) { console.log(result[i]);}
+			// GeoJSON Formatting Hack
+			for (var j = 0; j < json.geometry.coordinates.length; j++) {
+				if (json.geometry.type === 'LineString' && json.geometry.coordinates[j].length > 2)
+					json.geometry.coordinates[j] = json.geometry.coordinates[j].slice(0, 2);
+				for (var k = 0; k < json.geometry.coordinates[j].length; k++)
+					if (json.geometry.type === 'Polygon' && json.geometry.coordinates[j][k].length > 2)
+						json.geometry.coordinates[j][k] = json.geometry.coordinates[j][k].slice(0, 2);
+			}
+			if (!('id' in json)) {	// fix geojson id to match database ids
+				if (!(json.properties.osm_id === null)) {
+					json.id = json.geometry.type + '/' + json.properties.osm_id;
+				} else {
+					json.id = json.geometry.type + '/' + json.properties.osm_way_id;
+				}
+			}
+			geojson.addData(json);
+		}
+	}
+
 
 	function popupWindow(feature, layer) {
 		layer.on('click', function (e) {
@@ -179,6 +165,16 @@ var map = (function() {
 			if (!(lastFeature === null)) {
 				if (lastFeature.hasOwnProperty('id')) { geojson.addData(lastFeature); }
 				else { editingLayers.addData(lastFeature); }
+			}
+
+			if (!(feature.properties.other_tags === null)) {		// fix other_tags to be individual tags
+				var re = /"[^"]*"=>"[^"]*"/
+				var tags = feature.properties.other_tags.match(re);
+				for (var i = 0; i < tags.length; i++) {
+					var info = tags[i].split('"=>"');
+					feature.properties[info[0].substring(1)] = info[1].substring(0, info[1].length - 1);
+				}
+				feature.properties.other_tags = null;
 			}
 
 			lastFeature = feature;
