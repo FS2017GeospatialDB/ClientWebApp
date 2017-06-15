@@ -230,10 +230,8 @@ var map = (function() {
 	}
 
 	function removeProperty(input_id) {
-		console.log(iw_form);
 		var property = document.getElementById(input_id).parentElement.parentElement.parentElement;	// nested garbage
 		iw_form.removeChild(property);
-		console.log(iw_form);
 	}
 	
 	function deleteFeature() {
@@ -284,7 +282,6 @@ var map = (function() {
 			feature.id = id;
 			feature.properties.osm_id = id;
 			geojson.addData(feature);
-			console.log(id);
 		} else if (JSON.stringify(newFeatureProperties) != JSON.stringify(oldFeatureProperties)) {	// EDIT FEATURE
 			console.log("to thrift: update " + feature.id + " to " + JSON.stringify(feature));
 			var id = client.updateFeature(lastFeature.id, JSON.stringify(feature));
