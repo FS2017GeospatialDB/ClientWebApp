@@ -167,7 +167,7 @@ var map = (function() {
 				else { editingLayers.addData(lastFeature); }
 			}
 
-			if (!(feature.properties.other_tags === null)) {		// fix other_tags to be individual tags
+			if (!(feature.properties.other_tags == null)) {		// fix other_tags to be individual tags
 				var re = /"[^"]*"=>"[^"]*"/
 				var tags = feature.properties.other_tags.match(re);
 				for (var i = 0; i < tags.length; i++) {
@@ -279,6 +279,7 @@ var map = (function() {
 			feature.properties.osm_id = "tempOSM_ID_placeholder";
 			console.log("to thrift: add " + JSON.stringify(feature));
 			var id = client.updateFeature("new", JSON.stringify(feature));
+			console.log(id);
 			feature.id = id;
 			feature.properties.osm_id = id;
 			geojson.addData(feature);
