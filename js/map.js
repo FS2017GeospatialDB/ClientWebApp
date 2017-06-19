@@ -83,6 +83,9 @@ var map = (function() {
 	function submitPointQuery() {
 		// queries a single s2cell
 
+		// deselects
+		if (!(lastFeature === null)) { cancelAdd(); }
+
 		if (document.getElementById('hqToggle').children[0].checked) {
 			var date = document.getElementById('calendar').value;
 			timestamp = new Date(date);
@@ -106,6 +109,9 @@ var map = (function() {
 	function submitRegionQuery() {
 		// queries entire screen
 		
+		// deselects
+		if (!(lastFeature === null)) { cancelAdd(); }
+	
 		// checks for historical query
 		if (document.getElementById('hqToggle').children[0].checked) {
 			var date = document.getElementById('calendar').value;
