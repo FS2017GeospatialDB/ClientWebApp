@@ -172,6 +172,17 @@
         });
     </script>
 
+    <script>
+      $(document).keyup(function(e) {
+        if(e.which == 72) {
+          map.hideFeature();
+        }
+        if(e.which == 27) {
+          map.cancelAdd();
+        }
+      });
+    </script>
+
     <!-- Include all compiled plugins (below), or include individual files as needed -->
     <script src="js/bootstrap.min.js"></script>
     <script src="js/leaflet.draw-custom.js"></script>
