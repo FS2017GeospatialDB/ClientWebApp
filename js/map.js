@@ -122,6 +122,13 @@ var map = (function() {
 			time = timestamp.getTime();
 		} else { time = Date.now(); }
 
+		// checks for custom bounds
+		if (document.getElementById('custToggle').children[0].checked) {
+			map.fitBounds(L.latLngBounds(
+				[document.getElementById('tBox').value, document.getElementById('rBox').value],
+				[document.getElementById('bBox').value, document.getElementById('lBox').value]));
+		}
+
 		var bounds = map.getBounds();
 		var east = bounds.getEast();
 		var west = bounds.getWest();
