@@ -273,7 +273,7 @@ var map = (function() {
 
 		// read all boxes in to new geoJSON
 		var newFeatureProperties = {};
-		for (var i = 1; i < iw_form.elements.length; i++) { //skips first element (db_id)
+		for (var i = 1; i < iw_form.elements.length; i+=2) { //skips first element (db_id)
 			newFeatureProperties[iw_form.elements[i].id] = (iw_form.elements[i].value == "null") ? null : iw_form.elements[i].value;
 		}
 		var oldFeatureProperties = lastFeature.properties;
